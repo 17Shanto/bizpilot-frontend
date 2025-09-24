@@ -4,6 +4,34 @@ import { useAuth } from "@/context/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { Bar, Doughnut, Line } from "react-chartjs-2";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
+import {
   X,
   TrendingUp,
   Calendar,
@@ -20,6 +48,8 @@ import {
   DollarSign,
   RefreshCw,
   Edit3,
+  Download,
+  FileText,
 } from "lucide-react";
 
 const IdeaResultModal = ({
@@ -147,7 +177,7 @@ const IdeaResultModal = ({
   };
 
   const handleModificationSubmit = () => {
-    if (!modificationInput.trim()) return;
+    if (!modificationInput.trim() || isGenerating) return;
 
     console.log("🔄 MODIFICATION SUBMITTED FROM MODAL:");
     console.log("📝 Modification text:", modificationInput.trim());
@@ -172,6 +202,547 @@ const IdeaResultModal = ({
     setModificationInput("");
   };
 
+  // Function to convert data to CSV format
+  const convertToCSV = (data) => {
+    const csvRows = [];
+
+    // Add headers
+    csvRows.push(["Field", "Value", "Details"]);
+
+    // Basic idea information
+    if (data.idea) {
+      csvRows.push(["Business Idea Title", data.idea.title || "", ""]);
+      csvRows.push(["Location", data.idea.location || "", ""]);
+      csvRows.push(["Budget", data.idea.budget || "", ""]);
+      csvRows.push(["Category", data.idea.category || "", ""]);
+      csvRows.push(["Description", data.idea.description || "", ""]);
+    }
+
+    // Business models
+    if (data.business_models && data.business_models.length > 0) {
+      csvRows.push(["", "", ""]); // Empty row for separation
+      csvRows.push(["BUSINESS MODELS", "", ""]);
+
+      data.business_models.forEach((model, index) => {
+        csvRows.push([`Model ${index + 1} - Name`, model.name || "", ""]);
+        csvRows.push([`Model ${index + 1} - Summary`, model.summary || "", ""]);
+
+        // Cost breakdown
+        if (model.cost_breakdown) {
+          if (typeof model.cost_breakdown === "object") {
+            Object.entries(model.cost_breakdown).forEach(([key, value]) => {
+              csvRows.push([
+                `Model ${index + 1} - Cost: ${key}`,
+                value || "",
+                "",
+              ]);
+            });
+          } else {
+            csvRows.push([
+              `Model ${index + 1} - Cost Breakdown`,
+              model.cost_breakdown,
+              "",
+            ]);
+          }
+        }
+
+        // Revenue forecast
+        if (model.revenue_forecast) {
+          if (typeof model.revenue_forecast === "object") {
+            Object.entries(model.revenue_forecast).forEach(([key, value]) => {
+              csvRows.push([
+                `Model ${index + 1} - Revenue: ${key}`,
+                value || "",
+                "",
+              ]);
+            });
+          } else {
+            csvRows.push([
+              `Model ${index + 1} - Revenue Forecast`,
+              model.revenue_forecast,
+              "",
+            ]);
+          }
+        }
+
+        // Risks and opportunities
+        if (model.risks && Array.isArray(model.risks)) {
+          model.risks.forEach((risk, riskIndex) => {
+            csvRows.push([
+              `Model ${index + 1} - Risk ${riskIndex + 1}`,
+              risk,
+              "",
+            ]);
+          });
+        }
+
+        if (model.opportunities && Array.isArray(model.opportunities)) {
+          model.opportunities.forEach((opportunity, oppIndex) => {
+            csvRows.push([
+              `Model ${index + 1} - Opportunity ${oppIndex + 1}`,
+              opportunity,
+              "",
+            ]);
+          });
+        }
+      });
+    }
+
+    // Roadmap
+    if (data.roadmap && data.roadmap.milestones) {
+      csvRows.push(["", "", ""]); // Empty row for separation
+      csvRows.push(["ROADMAP MILESTONES", "", ""]);
+
+      if (Array.isArray(data.roadmap.milestones)) {
+        data.roadmap.milestones.forEach((milestone, index) => {
+          if (typeof milestone === "object") {
+            csvRows.push([
+              `Milestone ${index + 1} - Month`,
+              milestone.month || "",
+              "",
+            ]);
+            csvRows.push([
+              `Milestone ${index + 1} - Title`,
+              milestone.title || "",
+              "",
+            ]);
+            csvRows.push([
+              `Milestone ${index + 1} - Description`,
+              milestone.description || "",
+              "",
+            ]);
+          } else {
+            csvRows.push([`Milestone ${index + 1}`, milestone, ""]);
+          }
+        });
+      }
+    }
+
+    // Feasibility
+    if (data.feasibility) {
+      csvRows.push(["", "", ""]); // Empty row for separation
+      csvRows.push(["FEASIBILITY ANALYSIS", "", ""]);
+      csvRows.push([
+        "Profitable",
+        data.feasibility.profitable ? "Yes" : "No",
+        "",
+      ]);
+      csvRows.push([
+        "Recommended Model",
+        data.feasibility.recommended_model || "",
+        "",
+      ]);
+      csvRows.push([
+        "Confidence Score",
+        data.feasibility.confidence_score || "",
+        "",
+      ]);
+    }
+
+    // Automation insights (if available)
+    if (data.automation_insights) {
+      csvRows.push(["", "", ""]); // Empty row for separation
+      csvRows.push(["AUTOMATION INSIGHTS", "", ""]);
+
+      Object.entries(data.automation_insights).forEach(([key, value]) => {
+        if (typeof value === "object") {
+          csvRows.push([`Automation - ${key}`, JSON.stringify(value), ""]);
+        } else {
+          csvRows.push([`Automation - ${key}`, value || "", ""]);
+        }
+      });
+    }
+
+    // Convert to CSV string
+    return csvRows
+      .map((row) =>
+        row.map((field) => `"${String(field).replace(/"/g, '""')}"`).join(",")
+      )
+      .join("\n");
+  };
+
+  // Function to download CSV
+  const downloadCSV = () => {
+    try {
+      console.log("📥 CSV DOWNLOAD INITIATED:");
+      console.log("💾 Exporting data:", {
+        idea,
+        business_models,
+        roadmap,
+        feasibility,
+        automation_insights,
+      });
+
+      const csvData = convertToCSV({
+        idea,
+        business_models,
+        roadmap,
+        feasibility,
+        automation_insights,
+      });
+
+      console.log("📄 CSV data generated, length:", csvData.length);
+
+      const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+
+      if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+
+        // Generate filename with idea title and timestamp
+        const timestamp = new Date().toISOString().slice(0, 10);
+        const ideaTitle =
+          idea?.title?.replace(/[^a-z0-9]/gi, "_").toLowerCase() ||
+          "business_idea";
+        const filename = `${ideaTitle}_${timestamp}.csv`;
+
+        link.setAttribute("download", filename);
+
+        console.log("📁 Filename:", filename);
+
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        console.log("✅ CSV download completed successfully");
+      }
+    } catch (error) {
+      console.error("❌ Error downloading CSV:", error);
+      // You could add a toast notification here
+    }
+  };
+
+  // Function to download PDF with charts
+  const downloadPDF = async () => {
+    try {
+      console.log("📄 PDF DOWNLOAD INITIATED:");
+      console.log("💾 Generating PDF with charts and data");
+
+      // Create a new PDF document
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      let yPosition = 20;
+
+      // Add title
+      pdf.setFontSize(20);
+      pdf.setTextColor(47, 184, 106); // BizPilot green
+      pdf.text("Business Idea Report", pageWidth / 2, yPosition, {
+        align: "center",
+      });
+      yPosition += 15;
+
+      // Add idea title
+      if (idea?.title) {
+        pdf.setFontSize(16);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(`Title: ${idea.title}`, 20, yPosition);
+        yPosition += 10;
+      }
+
+      // Add basic info
+      pdf.setFontSize(12);
+      if (idea?.location) {
+        pdf.text(`Location: ${idea.location}`, 20, yPosition);
+        yPosition += 7;
+      }
+      if (idea?.budget) {
+        pdf.text(`Budget: ${idea.budget}`, 20, yPosition);
+        yPosition += 7;
+      }
+      if (idea?.category) {
+        pdf.text(`Category: ${idea.category}`, 20, yPosition);
+        yPosition += 10;
+      }
+
+      // Add business models section
+      if (business_models && business_models.length > 0) {
+        pdf.setFontSize(14);
+        pdf.setTextColor(47, 184, 106);
+        pdf.text("Business Models:", 20, yPosition);
+        yPosition += 10;
+
+        for (let i = 0; i < business_models.length; i++) {
+          const model = business_models[i];
+
+          // Check if we need a new page
+          if (yPosition > pageHeight - 40) {
+            pdf.addPage();
+            yPosition = 20;
+          }
+
+          pdf.setFontSize(12);
+          pdf.setTextColor(0, 0, 0);
+          pdf.text(
+            `${i + 1}. ${model.name || "Business Model"}`,
+            20,
+            yPosition
+          );
+          yPosition += 7;
+
+          if (model.summary || model.summery) {
+            const summary = model.summary || model.summery;
+            const splitSummary = pdf.splitTextToSize(summary, pageWidth - 40);
+            pdf.text(splitSummary, 25, yPosition);
+            yPosition += splitSummary.length * 5 + 5;
+          }
+
+          // Add revenue forecast data
+          if (
+            model.revenue_forecast &&
+            typeof model.revenue_forecast === "object"
+          ) {
+            pdf.text("Revenue Forecast:", 25, yPosition);
+            yPosition += 5;
+            Object.entries(model.revenue_forecast).forEach(
+              ([period, amount]) => {
+                pdf.text(
+                  `  ${period.replace("_", " ")}: $${amount}`,
+                  30,
+                  yPosition
+                );
+                yPosition += 5;
+              }
+            );
+            yPosition += 3;
+          }
+
+          // Add cost breakdown data
+          if (
+            model.cost_breakdown &&
+            typeof model.cost_breakdown === "object"
+          ) {
+            pdf.text("Cost Breakdown:", 25, yPosition);
+            yPosition += 5;
+            Object.entries(model.cost_breakdown).forEach(([key, value]) => {
+              pdf.text(`  ${key}: $${value}`, 30, yPosition);
+              yPosition += 5;
+            });
+            yPosition += 3;
+          }
+
+          yPosition += 5;
+        }
+      }
+
+      // Capture charts as images and add to PDF
+      const chartElements = document.querySelectorAll(
+        ".bg-gray-50.p-3.rounded-lg"
+      );
+      let chartIndex = 0;
+
+      for (const chartElement of chartElements) {
+        if (chartIndex >= 6) break; // Limit to prevent PDF from being too large
+
+        try {
+          const canvas = await html2canvas(chartElement, {
+            backgroundColor: "#f9fafb",
+            scale: 2,
+            logging: false,
+            useCORS: true,
+          });
+
+          const imgData = canvas.toDataURL("image/png");
+          const imgWidth = 80;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+          // Check if we need a new page for the chart
+          if (yPosition + imgHeight > pageHeight - 20) {
+            pdf.addPage();
+            yPosition = 20;
+          }
+
+          pdf.addImage(imgData, "PNG", 20, yPosition, imgWidth, imgHeight);
+          yPosition += imgHeight + 10;
+          chartIndex++;
+        } catch (chartError) {
+          console.warn("Failed to capture chart:", chartError);
+        }
+      }
+
+      // Add feasibility analysis
+      if (feasibility) {
+        if (yPosition > pageHeight - 30) {
+          pdf.addPage();
+          yPosition = 20;
+        }
+
+        pdf.setFontSize(14);
+        pdf.setTextColor(47, 184, 106);
+        pdf.text("Feasibility Analysis:", 20, yPosition);
+        yPosition += 10;
+
+        pdf.setFontSize(12);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(
+          `Profitable: ${feasibility.profitable ? "Yes" : "No"}`,
+          20,
+          yPosition
+        );
+        yPosition += 7;
+
+        if (feasibility.recommended_model) {
+          pdf.text(
+            `Recommended Model: ${feasibility.recommended_model}`,
+            20,
+            yPosition
+          );
+          yPosition += 7;
+        }
+
+        if (feasibility.confidence_score) {
+          pdf.text(
+            `Confidence Score: ${feasibility.confidence_score}`,
+            20,
+            yPosition
+          );
+          yPosition += 7;
+        }
+      }
+
+      // Add footer
+      const timestamp = new Date().toLocaleString();
+      pdf.setFontSize(8);
+      pdf.setTextColor(128, 128, 128);
+      pdf.text(
+        `Generated by BizPilot on ${timestamp}`,
+        pageWidth / 2,
+        pageHeight - 10,
+        { align: "center" }
+      );
+
+      // Generate filename and save
+      const ideaTitle =
+        idea?.title?.replace(/[^a-z0-9]/gi, "_").toLowerCase() ||
+        "business_idea";
+      const dateStamp = new Date().toISOString().slice(0, 10);
+      const filename = `${ideaTitle}_report_${dateStamp}.pdf`;
+
+      pdf.save(filename);
+
+      console.log("📁 PDF filename:", filename);
+      console.log("✅ PDF download completed successfully");
+    } catch (error) {
+      console.error("❌ Error generating PDF:", error);
+      // You could add a toast notification here
+    }
+  };
+
+  // Chart utility functions
+  const createCostBreakdownChart = (costData) => {
+    if (!costData || typeof costData !== "object") return null;
+
+    const labels = Object.keys(costData);
+    const values = Object.values(costData).map((val) => {
+      // Extract number from string if it contains currency symbols
+      const numValue =
+        typeof val === "string"
+          ? parseFloat(val.replace(/[^0-9.-]/g, ""))
+          : parseFloat(val) || 0;
+      return numValue;
+    });
+
+    return {
+      labels,
+      datasets: [
+        {
+          data: values,
+          backgroundColor: [
+            "#2fb86a",
+            "#059669",
+            "#10b981",
+            "#34d399",
+            "#6ee7b7",
+            "#a7f3d0",
+          ],
+          borderWidth: 0,
+        },
+      ],
+    };
+  };
+
+  const createRevenueChart = (revenueData) => {
+    if (!revenueData || typeof revenueData !== "object") return null;
+
+    const labels = Object.keys(revenueData);
+    const values = Object.values(revenueData).map((val) => {
+      const numValue =
+        typeof val === "string"
+          ? parseFloat(val.replace(/[^0-9.-]/g, ""))
+          : parseFloat(val) || 0;
+      return numValue;
+    });
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: "Revenue",
+          data: values,
+          backgroundColor: "rgba(47, 184, 106, 0.8)",
+          borderColor: "#2fb86a",
+          borderWidth: 2,
+        },
+      ],
+    };
+  };
+
+  const createRiskOpportunityChart = (risks, opportunities) => {
+    const riskCount = risks ? (Array.isArray(risks) ? risks.length : 1) : 0;
+    const opportunityCount = opportunities
+      ? Array.isArray(opportunities)
+        ? opportunities.length
+        : 1
+      : 0;
+
+    return {
+      labels: ["Risks", "Opportunities"],
+      datasets: [
+        {
+          data: [riskCount, opportunityCount],
+          backgroundColor: ["#ef4444", "#22c55e"],
+          borderWidth: 0,
+        },
+      ],
+    };
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "bottom",
+        labels: {
+          padding: 10,
+          font: {
+            size: 10,
+          },
+        },
+      },
+    },
+  };
+
+  const doughnutOptions = {
+    ...chartOptions,
+    cutout: "60%",
+    plugins: {
+      ...chartOptions.plugins,
+      legend: {
+        position: "right",
+        labels: {
+          padding: 8,
+          font: {
+            size: 10,
+          },
+          usePointStyle: true,
+        },
+      },
+    },
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -182,9 +753,41 @@ const IdeaResultModal = ({
     >
       <div
         ref={modalRef}
-        className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto"
+        className="relative bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Loading Overlay */}
+        {isGenerating && (
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center rounded-2xl">
+            <div className="text-center">
+              <div className="flex items-center justify-center mb-4">
+                <div
+                  className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"
+                  style={{ borderTopColor: "#2fb86a" }}
+                ></div>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                Updating Business Idea
+              </h3>
+              <p className="text-sm text-gray-600 max-w-xs">
+                AI is analyzing your modification and updating the business
+                plan...
+              </p>
+              <div className="mt-4 flex items-center justify-center space-x-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce"></div>
+                <div
+                  className="w-2 h-2 bg-green-500 rounded-full animate-bounce"
+                  style={{ animationDelay: "0.1s" }}
+                ></div>
+                <div
+                  className="w-2 h-2 bg-green-500 rounded-full animate-bounce"
+                  style={{ animationDelay: "0.2s" }}
+                ></div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="sticky top-0 bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 rounded-t-2xl">
           <div className="flex items-center justify-between">
@@ -276,6 +879,10 @@ const IdeaResultModal = ({
                 <h3 className="text-xl font-bold text-gray-900">
                   Business Models
                 </h3>
+                <BarChart3
+                  className="h-5 w-5 text-blue-500"
+                  title="Interactive Charts Available"
+                />
               </div>
               {!isPro && business_models?.length >= 2 && (
                 <Badge
@@ -301,6 +908,78 @@ const IdeaResultModal = ({
                   <p className="text-gray-600 mb-4">
                     {model.summery || model.summary}
                   </p>
+
+                  {/* Charts Section */}
+                  <div className="space-y-4 mb-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Cost Breakdown Chart */}
+                      {model.cost_breakdown &&
+                        typeof model.cost_breakdown === "object" && (
+                          <div className="bg-gray-50 p-3 rounded-lg">
+                            <h5 className="font-semibold text-gray-700 text-xs mb-2 text-center">
+                              Cost Breakdown
+                            </h5>
+                            <div style={{ height: "120px" }}>
+                              <Doughnut
+                                data={createCostBreakdownChart(
+                                  model.cost_breakdown
+                                )}
+                                options={doughnutOptions}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                      {/* Revenue Forecast Chart */}
+                      {model.revenue_forecast &&
+                        typeof model.revenue_forecast === "object" && (
+                          <div className="bg-gray-50 p-3 rounded-lg">
+                            <h5 className="font-semibold text-gray-700 text-xs mb-2 text-center">
+                              Revenue Forecast
+                            </h5>
+                            <div style={{ height: "120px" }}>
+                              <Bar
+                                data={createRevenueChart(
+                                  model.revenue_forecast
+                                )}
+                                options={chartOptions}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                      {/* Risk vs Opportunity Chart */}
+                      {(model.risks || model.opportunities) && (
+                        <div className="bg-gray-50 p-3 rounded-lg col-span-2">
+                          <h5 className="font-semibold text-gray-700 text-xs mb-2 text-center">
+                            Risk vs Opportunity Analysis
+                          </h5>
+                          <div style={{ height: "100px" }}>
+                            <Doughnut
+                              data={createRiskOpportunityChart(
+                                model.risks,
+                                model.opportunities
+                              )}
+                              options={{
+                                ...doughnutOptions,
+                                plugins: {
+                                  ...doughnutOptions.plugins,
+                                  legend: {
+                                    position: "bottom",
+                                    labels: {
+                                      padding: 5,
+                                      font: { size: 10 },
+                                      usePointStyle: true,
+                                    },
+                                  },
+                                },
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
                   <div className="space-y-3">
                     <div>
@@ -674,7 +1353,8 @@ const IdeaResultModal = ({
               </div>
               <button
                 onClick={toggleModificationSection}
-                className="px-4 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                disabled={isGenerating}
+                className="px-4 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {showModificationSection ? "Cancel" : "Make Changes"}
               </button>
@@ -744,24 +1424,58 @@ const IdeaResultModal = ({
           <div className="flex gap-3 pt-4 border-t border-gray-200">
             <button
               onClick={handleClose}
-              className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              disabled={isGenerating}
+              className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Close
             </button>
+
+            {/* CSV Download Button */}
+            <button
+              onClick={downloadCSV}
+              disabled={isGenerating || !idea}
+              className="px-4 py-3 bg-blue-100 text-blue-700 rounded-lg font-medium hover:bg-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              title="Download business idea data as CSV"
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">CSV</span>
+            </button>
+
+            {/* PDF Download Button */}
+            <button
+              onClick={downloadPDF}
+              disabled={isGenerating || !idea}
+              className="px-4 py-3 bg-purple-100 text-purple-700 rounded-lg font-medium hover:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              title="Download business idea report as PDF with charts"
+            >
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">PDF</span>
+            </button>
+
             {onClearSession && (
               <button
                 onClick={onClearSession}
-                className="px-4 py-3 bg-red-100 text-red-700 rounded-lg font-medium hover:bg-red-200 transition-colors"
+                disabled={isGenerating}
+                className="px-4 py-3 bg-red-100 text-red-700 rounded-lg font-medium hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Clear this session and start fresh"
               >
                 Clear Session
               </button>
             )}
             <button
-              className="flex-1 px-6 py-3 text-white rounded-lg font-medium transition-colors"
-              style={{ backgroundColor: "#2fb86a" }}
-              onMouseEnter={(e) => (e.target.style.backgroundColor = "#059669")}
-              onMouseLeave={(e) => (e.target.style.backgroundColor = "#2fb86a")}
+              disabled={isGenerating}
+              className="flex-1 px-6 py-3 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundColor: isGenerating ? "#9ca3af" : "#2fb86a" }}
+              onMouseEnter={(e) => {
+                if (!isGenerating) {
+                  e.target.style.backgroundColor = "#059669";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isGenerating) {
+                  e.target.style.backgroundColor = "#2fb86a";
+                }
+              }}
             >
               Save to Dashboard
             </button>
