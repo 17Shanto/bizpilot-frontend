@@ -21,6 +21,7 @@ import {
   Star,
   Globe,
   Shield,
+  Languages,
 } from "lucide-react";
 import heroImage from "@/assets/hero-image.jpg";
 
@@ -36,6 +37,13 @@ const Landing = () => {
   const [originalPrompt, setOriginalPrompt] = React.useState("");
   const [showRestoreNotification, setShowRestoreNotification] =
     React.useState(false);
+
+  // Voice-to-text state
+  const [isListening, setIsListening] = React.useState(false);
+  const [recognition, setRecognition] = React.useState(null);
+  const [speechSupported, setSpeechSupported] = React.useState(false);
+  const [isTranslating, setIsTranslating] = React.useState(false);
+  const [currentLanguage, setCurrentLanguage] = React.useState("bn-BD"); // Start with Bangla
 
   // Load data from localStorage on component mount
   React.useEffect(() => {
@@ -61,6 +69,148 @@ const Landing = () => {
       localStorage.removeItem("bizpilot-original-prompt");
     }
   }, [isAuthenticated]);
+
+  // Translation service function (using Google Translate API alternative - MyMemory)
+  const translateText = async (text, fromLang = "bn", toLang = "en") => {
+    try {
+      setIsTranslating(true);
+      console.log("🌐 Translating text:", text, "from", fromLang, "to", toLang);
+
+      const response = await fetch(
+        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
+          text
+        )}&langpair=${fromLang}|${toLang}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Translation service error");
+      }
+
+      const data = await response.json();
+
+      if (data.responseStatus === 200 && data.responseData) {
+        const translatedText = data.responseData.translatedText;
+        console.log("✅ Translation successful:", translatedText);
+        return translatedText;
+      } else {
+        throw new Error("Translation failed");
+      }
+    } catch (error) {
+      console.error("❌ Translation error:", error);
+      toast.error("Translation failed. Using original text.");
+      return text; // Return original text if translation fails
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  // Detect if text is primarily Bangla (simple detection)
+  const isBanglaText = (text) => {
+    const banglaRegex = /[\u0980-\u09FF]/;
+    const banglaCharCount = (text.match(/[\u0980-\u09FF]/g) || []).length;
+    const totalCharCount = text.replace(/\s/g, "").length;
+    return banglaCharCount / totalCharCount > 0.3; // If more than 30% Bangla characters
+  };
+
+  // Initialize Speech Recognition
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      if (SpeechRecognition) {
+        setSpeechSupported(true);
+
+        const recognitionInstance = new SpeechRecognition();
+        recognitionInstance.continuous = true;
+        recognitionInstance.interimResults = true;
+        recognitionInstance.lang = currentLanguage; // Use dynamic language
+
+        recognitionInstance.onstart = () => {
+          console.log("🎤 Voice recognition started");
+          setIsListening(true);
+        };
+
+        recognitionInstance.onresult = async (event) => {
+          let finalTranscript = "";
+          let interimTranscript = "";
+
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript;
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+
+          // Process final transcript
+          if (finalTranscript) {
+            let processedText = finalTranscript.trim();
+
+            // If we're using Bangla recognition or detect Bangla text, translate it
+            if (currentLanguage === "bn-BD" || isBanglaText(processedText)) {
+              console.log("🔄 Detected Bangla text, translating to English...");
+              processedText = await translateText(processedText, "bn", "en");
+            }
+
+            // Update the input with processed text
+            setDemoInput((prev) => {
+              const cleanPrev = prev.trim();
+              const cleanTranscript = processedText;
+              if (cleanPrev && cleanTranscript) {
+                return cleanPrev + " " + cleanTranscript;
+              } else if (cleanTranscript) {
+                return cleanTranscript;
+              }
+              return cleanPrev;
+            });
+          }
+
+          // For interim results, we could show them in a different way if needed
+          // For now, we'll just show them as they come in the console
+          if (interimTranscript) {
+            console.log("🎤 Interim result:", interimTranscript);
+          }
+        };
+
+        recognitionInstance.onerror = (event) => {
+          console.error("🎤 Speech recognition error:", event.error);
+          setIsListening(false);
+
+          // Handle different error types
+          if (event.error === "not-allowed") {
+            toast.error(
+              "Microphone access denied. Please allow microphone permissions."
+            );
+          } else if (event.error === "no-speech") {
+            toast.error("No speech detected. Please try again.");
+          } else {
+            toast.error("Voice recognition error. Please try again.");
+          }
+        };
+
+        recognitionInstance.onend = () => {
+          console.log("🎤 Voice recognition ended");
+          setIsListening(false);
+        };
+
+        setRecognition(recognitionInstance);
+      } else {
+        console.warn("🎤 Speech Recognition not supported in this browser");
+        setSpeechSupported(false);
+      }
+    }
+
+    // Cleanup function
+    return () => {
+      if (recognition) {
+        recognition.stop();
+        setIsListening(false);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentLanguage]);
 
   // Save to localStorage whenever data changes
   const saveToLocalStorage = (data, prompt) => {
@@ -116,6 +266,45 @@ const Landing = () => {
   const dismissRestoreNotification = () => {
     setShowRestoreNotification(false);
     clearStoredData();
+  };
+
+  // Toggle language between Bangla and English
+  const toggleLanguage = () => {
+    const newLanguage = currentLanguage === "bn-BD" ? "en-US" : "bn-BD";
+    setCurrentLanguage(newLanguage);
+    console.log("🌐 Language switched to:", newLanguage);
+
+    // Stop current recognition if active and restart with new language
+    if (isListening && recognition) {
+      recognition.stop();
+    }
+  };
+
+  // Toggle voice recognition
+  const toggleVoiceRecognition = () => {
+    if (!speechSupported) {
+      toast.error("Voice recognition is not supported in your browser.");
+      return;
+    }
+
+    if (!recognition) {
+      toast.error("Voice recognition is not initialized.");
+      return;
+    }
+
+    if (isListening) {
+      console.log("🎤 Stopping voice recognition");
+      recognition.stop();
+      setIsListening(false);
+    } else {
+      console.log("🎤 Starting voice recognition");
+      try {
+        recognition.start();
+      } catch (error) {
+        console.error("🎤 Error starting recognition:", error);
+        toast.error("Failed to start voice recognition. Please try again.");
+      }
+    }
   };
 
   const handleDemoSubmit = async () => {
@@ -348,35 +537,131 @@ const Landing = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="E.g., Eco-friendly food delivery service in Dhaka with $5000 budget"
-                  value={demoInput}
-                  onChange={(e) => setDemoInput(e.target.value)}
-                  className="flex-1"
-                  onKeyDown={(e) => e.key === "Enter" && handleDemoSubmit()}
-                />
-                <AnimatedButton
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Voice input"
-                >
-                  <Mic className="h-4 w-4" />
-                </AnimatedButton>
-                <AnimatedButton
-                  onClick={handleDemoSubmit}
-                  disabled={!demoInput.trim() || isGenerating}
-                  className="min-w-[140px]"
-                >
-                  {isGenerating ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Generating...
-                    </div>
-                  ) : (
-                    "Generate Models"
-                  )}
-                </AnimatedButton>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      placeholder="E.g., Eco-friendly food delivery service in Dhaka with $5000 budget"
+                      value={demoInput}
+                      onChange={(e) => setDemoInput(e.target.value)}
+                      className={`flex-1 ${
+                        isListening
+                          ? "ring-2 ring-primary border-primary shadow-md"
+                          : ""
+                      }`}
+                      onKeyDown={(e) => e.key === "Enter" && handleDemoSubmit()}
+                    />
+                    {(isListening || isTranslating) && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <div
+                            className={`w-2 h-2 rounded-full animate-pulse ${
+                              isTranslating ? "bg-blue-500" : "bg-red-500"
+                            }`}
+                          ></div>
+                          <span className="text-xs text-primary font-medium">
+                            {isTranslating ? "Translating..." : "Listening..."}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {/* Language Toggle Button */}
+                  <AnimatedButton
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Switch to ${
+                      currentLanguage === "bn-BD" ? "English" : "Bangla"
+                    } input`}
+                    onClick={toggleLanguage}
+                    disabled={isListening}
+                    className={`transition-all duration-200 ${
+                      currentLanguage === "bn-BD"
+                        ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    } ${isListening ? "opacity-50 cursor-not-allowed" : ""}`}
+                    title={`Currently: ${
+                      currentLanguage === "bn-BD" ? "বাংলা" : "English"
+                    } | Click to switch`}
+                  >
+                    <Languages className="h-4 w-4" />
+                    <span className="absolute -bottom-1 -right-1 text-xs font-bold">
+                      {currentLanguage === "bn-BD" ? "বাং" : "EN"}
+                    </span>
+                  </AnimatedButton>
+                  <AnimatedButton
+                    variant="ghost"
+                    size="icon"
+                    aria-label={
+                      isListening ? "Stop voice input" : "Start voice input"
+                    }
+                    onClick={toggleVoiceRecognition}
+                    disabled={!speechSupported}
+                    className={`transition-all duration-200 ${
+                      isListening
+                        ? "bg-primary text-white hover:bg-primary/90 shadow-lg animate-pulse"
+                        : speechSupported
+                        ? "hover:bg-primary/10 hover:text-primary"
+                        : "opacity-50 cursor-not-allowed"
+                    }`}
+                    style={isListening ? { backgroundColor: "#2fb86a" } : {}}
+                    title={
+                      !speechSupported
+                        ? "Voice input not supported in your browser"
+                        : isListening
+                        ? "Click to stop listening"
+                        : "Click to start voice input"
+                    }
+                  >
+                    <Mic
+                      className={`h-4 w-4 ${
+                        isListening ? "animate-pulse" : ""
+                      }`}
+                    />
+                    {isListening && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
+                    )}
+                  </AnimatedButton>
+                  <AnimatedButton
+                    onClick={handleDemoSubmit}
+                    disabled={!demoInput.trim() || isGenerating}
+                    className="min-w-[140px]"
+                  >
+                    {isGenerating ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Generating...
+                      </div>
+                    ) : (
+                      "Generate Models"
+                    )}
+                  </AnimatedButton>
+                </div>
+                {speechSupported ? (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Mic className="h-3 w-3" />
+                      <Languages className="h-3 w-3" />
+                      Voice input supports both বাংলা and English with
+                      auto-translation
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Current language:{" "}
+                      <span className="font-medium text-primary">
+                        {currentLanguage === "bn-BD"
+                          ? "বাংলা (Bangla)"
+                          : "English"}
+                      </span>
+                      {currentLanguage === "bn-BD" &&
+                        " → Auto-translate to English"}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Voice input not supported in your browser. Please type your
+                    business idea.
+                  </p>
+                )}
               </div>
 
               {/* Error Message */}
