@@ -1,72 +1,83 @@
-import {
-  signInWithPopup,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-} from "firebase/auth";
-import { auth, googleProvider } from "../firebase";
+const API_BASE_URL = "https://bizpilot-backend.vercel.app/bizpilot-api";
 
-// Google login
-export const loginWithGoogle = async () => {
+// Login with email and password using backend API
+export const loginUser = async (email, password) => {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
-    return result.user; // contains email, name, photo
+    const response = await fetch(`${API_BASE_URL}/user/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+        password,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Login failed");
+    }
+
+    const data = await response.json();
+    return data; // Should contain user object + token
   } catch (error) {
-    console.error("Google login error:", error);
+    console.error("Login error:", error);
     throw error;
   }
 };
 
-// Email/password login
-export const loginWithEmail = async (email, password) => {
+// Logout function
+export const logoutUser = () => {
+  localStorage.removeItem("authToken");
+  localStorage.removeItem("userData");
+};
+
+// Get stored user data
+export const getStoredUser = () => {
   try {
-    const result = await signInWithEmailAndPassword(auth, email, password);
-    return result.user;
+    const userData = localStorage.getItem("userData");
+    return userData ? JSON.parse(userData) : null;
   } catch (error) {
-    console.error("Email login error:", error);
-    throw error;
+    console.error("Error parsing stored user data:", error);
+    return null;
   }
 };
 
-// Email/password signup
-export const signupWithEmail = async (email, password) => {
-  try {
-    const result = await createUserWithEmailAndPassword(auth, email, password);
-    return result.user;
-  } catch (error) {
-    console.error("Signup error:", error);
-    throw error;
-  }
+// Get stored token
+export const getStoredToken = () => {
+  return localStorage.getItem("authToken");
 };
 
-// Logout
-export const logout = async () => {
-  try {
-    await signOut(auth);
-  } catch (error) {
-    console.error("Logout error:", error);
-    throw error;
-  }
+// Store user data and token
+export const storeAuthData = (user, token) => {
+  localStorage.setItem("userData", JSON.stringify(user));
+  localStorage.setItem("authToken", token);
 };
 
-// Get friendly error messages
+// Check if user is authenticated
+export const isAuthenticated = () => {
+  const token = getStoredToken();
+  const user = getStoredUser();
+  return !!(token && user);
+};
+
+// Get error message for authentication errors
 export const getErrorMessage = (error) => {
+  if (error.message) {
+    return error.message;
+  }
+
   switch (error.code) {
-    case "auth/user-not-found":
-      return "No account found with this email address.";
-    case "auth/wrong-password":
+    case "NETWORK_ERROR":
+      return "Network error. Please check your internet connection.";
+    case "INVALID_CREDENTIALS":
+      return "Invalid email or password.";
+    case "USER_NOT_FOUND":
+      return "No account found with this email.";
+    case "WRONG_PASSWORD":
       return "Incorrect password.";
-    case "auth/email-already-in-use":
-      return "An account with this email already exists.";
-    case "auth/weak-password":
-      return "Password should be at least 6 characters.";
-    case "auth/invalid-email":
-      return "Please enter a valid email address.";
-    case "auth/too-many-requests":
-      return "Too many failed attempts. Please try again later.";
-    case "auth/popup-closed-by-user":
-      return "Google sign-in was cancelled.";
     default:
-      return "An error occurred. Please try again.";
+      return "An unexpected error occurred. Please try again.";
   }
 };

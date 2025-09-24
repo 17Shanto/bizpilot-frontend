@@ -2,14 +2,12 @@ import React, { useRef, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import { Header } from "@/components/layout/header";
-import {
-  loginWithGoogle,
-  loginWithEmail,
-  getErrorMessage,
-} from "@/services/authService";
+import { useAuth } from "@/context/AuthContext";
+import { getErrorMessage } from "@/services/authService";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login, isAuthenticated } = useAuth();
   const cardRef = useRef(null);
   const buttonRef = useRef(null);
   const googleButtonRef = useRef(null);
@@ -18,6 +16,13 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated()) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
 
   useEffect(() => {
     const card = cardRef.current;
@@ -131,9 +136,9 @@ const Login = () => {
     if (Object.keys(newErrors).length === 0) {
       setIsLoading(true);
       try {
-        const user = await loginWithEmail(email, password);
-        if (user) {
-          console.log("Logged in as:", user.displayName || user.email);
+        const result = await login(email, password);
+        if (result) {
+          console.log("Logged in successfully:", result.user);
           navigate("/dashboard");
         }
       } catch (error) {
@@ -145,18 +150,10 @@ const Login = () => {
   };
 
   const handleGoogleLogin = async () => {
-    setIsLoading(true);
-    try {
-      const user = await loginWithGoogle();
-      if (user) {
-        console.log("Logged in with Google as:", user.displayName);
-        navigate("/dashboard");
-      }
-    } catch (error) {
-      setErrors({ auth: getErrorMessage(error) });
-    } finally {
-      setIsLoading(false);
-    }
+    // Google login not implemented with backend API yet
+    setErrors({
+      auth: "Google login not available. Please use email and password.",
+    });
   };
 
   return (
@@ -382,15 +379,15 @@ const Login = () => {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{" "}
-              <a
-                href="#"
-                className="font-medium transition-colors duration-200"
+              <button
+                onClick={() => navigate("/register")}
+                className="font-medium transition-colors duration-200 hover:underline"
                 style={{ color: "#2fb86a" }}
                 onMouseEnter={(e) => (e.target.style.color = "#059669")}
                 onMouseLeave={(e) => (e.target.style.color = "#2fb86a")}
               >
                 Sign up
-              </a>
+              </button>
             </p>
           </div>
         </div>

@@ -1,8 +1,14 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../firebase";
+import React, { createContext, useContext, useState, useEffect } from "react";
+import {
+  loginUser as apiLoginUser,
+  logoutUser as apiLogoutUser,
+  getStoredUser,
+  getStoredToken,
+  storeAuthData,
+  isAuthenticated as checkIsAuthenticated,
+} from "@/services/authService";
 
-const AuthContext = createContext();
+const AuthContext = createContext({});
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -13,26 +19,131 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Initialize auth state from localStorage on mount
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      setLoading(false);
-    });
+    const initializeAuth = () => {
+      try {
+        const storedUser = getStoredUser();
+        const storedToken = getStoredToken();
 
-    return unsubscribe;
+        if (storedUser && storedToken) {
+          setUser(storedUser);
+          setToken(storedToken);
+        }
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+        // Clear invalid data
+        apiLogoutUser();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
   }, []);
 
-  const value = {
-    currentUser,
-    loading,
+  // Login function
+  const login = async (email, password) => {
+    try {
+      const response = await apiLoginUser(email, password);
+
+      // Extract user and token from the specific API response structure
+      const userData = response.data?.user;
+      const authToken = response.data?.accessToken;
+
+      if (!authToken) {
+        throw new Error("No authentication token received");
+      }
+
+      if (!userData) {
+        throw new Error("No user data received");
+      }
+
+      // Store in localStorage
+      storeAuthData(userData, authToken);
+
+      // Update state
+      setUser(userData);
+      setToken(authToken);
+
+      return { user: userData, token: authToken };
+    } catch (error) {
+      console.error("Login failed:", error);
+      throw error;
+    }
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
+  // Logout function
+  const logout = () => {
+    try {
+      // Clear localStorage
+      apiLogoutUser();
+
+      // Clear state
+      setUser(null);
+      setToken(null);
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
+  // Check if user is authenticated
+  const isAuthenticated = () => {
+    return checkIsAuthenticated() && user && token;
+  };
+
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (!user) return "";
+
+    // Handle the API response structure: firstName + lastName
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+
+    return (
+      user.displayName ||
+      user.name ||
+      user.firstName ||
+      user.email?.split("@")[0] ||
+      "User"
+    );
+  };
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (!user) return "";
+
+    const displayName = getUserDisplayName();
+    const nameParts = displayName.split(" ");
+
+    if (nameParts.length >= 2) {
+      return `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase();
+    }
+
+    return displayName.substring(0, 2).toUpperCase();
+  };
+
+  // Get user avatar URL
+  const getUserAvatar = () => {
+    return user?.photo || user?.avatar || user?.profilePicture || null;
+  };
+
+  const value = {
+    user,
+    token,
+    isLoading,
+    login,
+    logout,
+    isAuthenticated,
+    getUserDisplayName,
+    getUserInitials,
+    getUserAvatar,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
