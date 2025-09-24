@@ -1,10 +1,15 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/layout/header";
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { IdeaCard } from "@/components/ui/idea-card";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import IdeaResultModal from "@/components/ideas/IdeaResultModal";
+import { useAuth } from "@/context/AuthContext";
+import { generateBusinessIdea } from "@/services/authService";
+import { toast } from "sonner";
 import {
   Lightbulb,
   TrendingUp,
@@ -20,31 +25,57 @@ import {
 import heroImage from "@/assets/hero-image.jpg";
 
 const Landing = () => {
-  const [demoInput, setDemoInput] = React.useState("");
-  const [showDemoResults, setShowDemoResults] = React.useState(false);
+  const navigate = useNavigate();
+  const { isAuthenticated, user, token, getUserAccountStatus } = useAuth();
 
-  const handleDemoSubmit = () => {
-    if (demoInput.trim()) {
-      setShowDemoResults(true);
+  const [demoInput, setDemoInput] = React.useState("");
+  const [isGenerating, setIsGenerating] = React.useState(false);
+  const [showModal, setShowModal] = React.useState(false);
+  const [generatedData, setGeneratedData] = React.useState(null);
+  const [errorMessage, setErrorMessage] = React.useState("");
+
+  const handleDemoSubmit = async () => {
+    if (!demoInput.trim()) return;
+
+    // Check if user is logged in
+    if (!isAuthenticated()) {
+      setErrorMessage("Please log in to generate business ideas");
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
+      return;
+    }
+
+    setIsGenerating(true);
+    setErrorMessage("");
+
+    try {
+      // Generate the prompt with the format: "idea, location, and budget"
+      const prompt = demoInput.trim();
+      const accountType = getUserAccountStatus();
+
+      const response = await generateBusinessIdea(
+        prompt,
+        user._id,
+        token,
+        accountType
+      );
+
+      if (response.statusCode === 201 && response.data) {
+        setGeneratedData(response.data);
+        setShowModal(true);
+        toast.success("Business idea generated successfully!");
+      } else {
+        throw new Error("Invalid response from server");
+      }
+    } catch (error) {
+      console.error("Error generating business idea:", error);
+      setErrorMessage("Failed to generate idea. Please try again.");
+      toast.error("Failed to generate business idea");
+    } finally {
+      setIsGenerating(false);
     }
   };
-
-  const mockDemoResults = [
-    {
-      title: "Lean Startup Model",
-      description:
-        "Minimal viable product approach with focus on customer validation and iterative development.",
-      revenue: "$2,500/month by month 6",
-      investment: "$5,000 initial",
-    },
-    {
-      title: "Growth-Focused Model",
-      description:
-        "Aggressive expansion strategy with emphasis on market penetration and scaling operations.",
-      revenue: "$8,000/month by month 6",
-      investment: "$15,000 initial",
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -138,7 +169,7 @@ const Landing = () => {
             <CardContent className="space-y-6">
               <div className="flex gap-2">
                 <Input
-                  placeholder="E.g., Eco-friendly food delivery service in Dhaka"
+                  placeholder="E.g., Eco-friendly food delivery service in Dhaka with $5000 budget"
                   value={demoInput}
                   onChange={(e) => setDemoInput(e.target.value)}
                   className="flex-1"
@@ -153,44 +184,28 @@ const Landing = () => {
                 </AnimatedButton>
                 <AnimatedButton
                   onClick={handleDemoSubmit}
-                  disabled={!demoInput.trim()}
+                  disabled={!demoInput.trim() || isGenerating}
+                  className="min-w-[140px]"
                 >
-                  Generate Models
+                  {isGenerating ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Generating...
+                    </div>
+                  ) : (
+                    "Generate Models"
+                  )}
                 </AnimatedButton>
               </div>
 
-              {showDemoResults && (
-                <div className="grid md:grid-cols-2 gap-4 animate-fade-in">
-                  {mockDemoResults.map((model, index) => (
-                    <IdeaCard
-                      key={index}
-                      title={model.title}
-                      description={model.description}
-                      status="completed"
-                      className="bg-bp-green-50 border-bp-green-200"
-                    >
-                      <div className="mt-4 space-y-2 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Projected Revenue:
-                          </span>
-                          <span className="font-medium text-primary">
-                            {model.revenue}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Initial Investment:
-                          </span>
-                          <span className="font-medium">
-                            {model.investment}
-                          </span>
-                        </div>
-                      </div>
-                    </IdeaCard>
-                  ))}
+              {/* Error Message */}
+              {errorMessage && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{errorMessage}</p>
                 </div>
               )}
+
+              {/* Mock demo results removed - now using real API integration */}
             </CardContent>
           </Card>
         </div>
@@ -580,6 +595,17 @@ const Landing = () => {
           </div>
         </div>
       </footer>
+
+      {/* Idea Result Modal */}
+      <IdeaResultModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        idea={generatedData?.idea}
+        business_models={generatedData?.business_models}
+        roadmap={generatedData?.roadmap}
+        feasibility={generatedData?.feasibility}
+        automation_insights={generatedData?.automation_insights}
+      />
     </div>
   );
 };

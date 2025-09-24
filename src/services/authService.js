@@ -62,6 +62,40 @@ export const isAuthenticated = () => {
   return !!(token && user);
 };
 
+// Generate business idea using AI
+export const generateBusinessIdea = async (
+  prompt,
+  userId,
+  token,
+  accountType
+) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/idea`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+      body: JSON.stringify({
+        prompt,
+        user: userId,
+        account: accountType || "Free",
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to generate business idea");
+    }
+
+    const data = await response.json();
+    return data; // Should contain idea, business_models, roadmap, feasibility
+  } catch (error) {
+    console.error("Business idea generation error:", error);
+    throw error;
+  }
+};
+
 // Get error message for authentication errors
 export const getErrorMessage = (error) => {
   if (error.message) {

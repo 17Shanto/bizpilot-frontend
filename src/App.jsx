@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import RegistrationForm from "./pages/RegistrationForm";
+import PricePage from "./pages/PricePage";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<RegistrationForm />} />
+            <Route path="/price" element={<PricePage />} />
             <Route
               path="/dashboard"
               element={
@@ -44,7 +46,7 @@ const App = () => (
               path="/pricing"
               element={
                 <ProtectedRoute>
-                  <NotFound />
+                  <PricePage />
                 </ProtectedRoute>
               }
             />

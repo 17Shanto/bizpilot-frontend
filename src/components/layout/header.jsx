@@ -2,6 +2,7 @@ import * as React from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { AnimatedButton } from "@/components/ui/animated-button";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/AuthContext";
 import { gsap } from "gsap";
 import { Menu, MessageCircle, User, ChevronDown, LogOut } from "lucide-react";
@@ -15,6 +16,7 @@ const Header = React.forwardRef(({ className, ...props }, ref) => {
     getUserDisplayName,
     getUserInitials,
     getUserAvatar,
+    getUserAccountStatus,
   } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
 
@@ -105,6 +107,26 @@ const Header = React.forwardRef(({ className, ...props }, ref) => {
 
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen);
+  };
+
+  // Get account badge styling based on account type
+  const getAccountBadgeStyle = (accountType) => {
+    const type = accountType?.toLowerCase();
+    if (type === "free") {
+      return {
+        className: "bg-green-100 text-green-700 border-green-200",
+        text: "Free Account",
+      };
+    } else if (type === "pro" || type === "enterprise") {
+      return {
+        className: "bg-yellow-100 text-yellow-700 border-yellow-200",
+        text: `${accountType} Account`,
+      };
+    }
+    return {
+      className: "bg-green-100 text-green-700 border-green-200",
+      text: "Free Account",
+    };
   };
 
   // Close dropdown when clicking outside
@@ -255,23 +277,44 @@ const Header = React.forwardRef(({ className, ...props }, ref) => {
                         {getUserInitials()}
                       </div>
                     )}
-                    <span className="hidden sm:block max-w-32 truncate">
-                      {getUserDisplayName()}
-                    </span>
+                    <div className="hidden sm:flex sm:flex-col sm:items-start">
+                      <span className="max-w-32 truncate text-sm font-medium">
+                        {getUserDisplayName()}
+                      </span>
+                      <Badge
+                        className={`text-xs px-2 py-0.5 ${
+                          getAccountBadgeStyle(getUserAccountStatus()).className
+                        }`}
+                        variant="outline"
+                      >
+                        {getAccountBadgeStyle(getUserAccountStatus()).text}
+                      </Badge>
+                    </div>
                   </div>
                   <ChevronDown className="h-4 w-4" />
                 </button>
 
                 {/* Dropdown Menu */}
                 {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                    <div className="px-4 py-2 border-b border-gray-100">
+                  <div className="absolute right-0 mt-2 w-52 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                    <div className="px-4 py-3 border-b border-gray-100">
                       <p className="text-sm font-medium text-gray-900 truncate">
                         {getUserDisplayName()}
                       </p>
                       <p className="text-xs text-gray-500 truncate">
                         {user?.email}
                       </p>
+                      <div className="mt-2">
+                        <Badge
+                          className={`text-xs px-2 py-1 ${
+                            getAccountBadgeStyle(getUserAccountStatus())
+                              .className
+                          }`}
+                          variant="outline"
+                        >
+                          {getAccountBadgeStyle(getUserAccountStatus()).text}
+                        </Badge>
+                      </div>
                     </div>
                     <button
                       onClick={handleLogout}

@@ -133,6 +133,18 @@ export const AuthProvider = ({ children }) => {
     return user?.photo || user?.avatar || user?.profilePicture || null;
   };
 
+  // Get user account status
+  const getUserAccountStatus = () => {
+    return user?.account || "Free";
+  };
+
+  // Update user data (for account upgrades)
+  const updateUser = (updatedUserData) => {
+    const newUserData = { ...user, ...updatedUserData };
+    setUser(newUserData);
+    storeAuthData(newUserData, token);
+  };
+
   const value = {
     user,
     token,
@@ -143,6 +155,8 @@ export const AuthProvider = ({ children }) => {
     getUserDisplayName,
     getUserInitials,
     getUserAvatar,
+    getUserAccountStatus,
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
