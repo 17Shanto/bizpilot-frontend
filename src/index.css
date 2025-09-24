@@ -1,0 +1,140 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* BizPilot Design System - Bangladesh-themed with light green primary and red accents */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    /* Bangladesh-themed color palette */
+    --bp-green-50: 146 91% 97%;
+    --bp-green-100: 146 80% 94%;
+    --bp-green: 146 44% 68%;
+    --bp-green-600: 146 58% 45%;
+    --bp-green-700: 146 65% 35%;
+    
+    --bp-red: 0 87% 59%;
+    --bp-red-50: 0 86% 97%;
+    
+    --bp-gray-50: 220 14% 98%;
+    --bp-gray-100: 220 13% 96%;
+    --bp-gray-200: 220 13% 91%;
+    --bp-gray-700: 220 9% 25%;
+    --bp-gray-900: 220 13% 9%;
+
+    /* Semantic tokens */
+    --background: var(--bp-gray-50);
+    --foreground: var(--bp-gray-900);
+
+    --card: 0 0% 100%;
+    --card-foreground: var(--bp-gray-900);
+
+    --popover: 0 0% 100%;
+    --popover-foreground: var(--bp-gray-900);
+
+    --primary: var(--bp-green-600);
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: var(--bp-green-100);
+    --secondary-foreground: var(--bp-gray-900);
+
+    --muted: var(--bp-gray-100);
+    --muted-foreground: var(--bp-gray-700);
+
+    --accent: var(--bp-red);
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: var(--bp-red);
+    --destructive-foreground: 0 0% 100%;
+
+    --border: var(--bp-gray-200);
+    --input: var(--bp-gray-200);
+    --ring: var(--bp-green-600);
+
+    --radius: 0.75rem;
+
+    /* Custom BizPilot tokens */
+    --hero-gradient: linear-gradient(135deg, hsl(var(--bp-green-50)) 0%, hsl(var(--bp-green-100)) 100%);
+    --card-shadow-base: 0 6px 18px hsl(var(--bp-gray-900) / 0.04);
+    --card-shadow-hover: 0 10px 30px hsl(var(--bp-gray-900) / 0.08);
+    --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: var(--bp-gray-900);
+    --foreground: var(--bp-gray-50);
+    --card: var(--bp-gray-900);
+    --card-foreground: var(--bp-gray-50);
+    --popover: var(--bp-gray-900);
+    --popover-foreground: var(--bp-gray-50);
+    --primary: var(--bp-green);
+    --primary-foreground: var(--bp-gray-900);
+    --secondary: var(--bp-gray-700);
+    --secondary-foreground: var(--bp-gray-50);
+    --muted: var(--bp-gray-700);
+    --muted-foreground: var(--bp-gray-200);
+    --accent: var(--bp-red);
+    --accent-foreground: var(--bp-gray-50);
+    --destructive: var(--bp-red);
+    --destructive-foreground: var(--bp-gray-50);
+    --border: var(--bp-gray-700);
+    --input: var(--bp-gray-700);
+    --ring: var(--bp-green);
+    --hero-gradient: linear-gradient(135deg, hsl(var(--bp-gray-900)) 0%, hsl(var(--bp-gray-700)) 100%);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-inter;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+}
+
+@layer utilities {
+  .font-inter {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  
+  .hero-gradient {
+    background: var(--hero-gradient);
+  }
+  
+  .card-shadow {
+    box-shadow: var(--card-shadow-base);
+  }
+  
+  .card-shadow-hover {
+    box-shadow: var(--card-shadow-hover);
+  }
+  
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+  
+  .text-balance {
+    text-wrap: balance;
+  }
+}
