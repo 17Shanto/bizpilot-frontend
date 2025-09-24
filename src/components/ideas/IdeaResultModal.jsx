@@ -1,7 +1,8 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { gsap } from "gsap";
 import { useAuth } from "@/context/AuthContext";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   X,
   TrendingUp,
@@ -17,6 +18,8 @@ import {
   MessageSquare,
   Zap,
   DollarSign,
+  RefreshCw,
+  Edit3,
 } from "lucide-react";
 
 const IdeaResultModal = ({
@@ -27,14 +30,46 @@ const IdeaResultModal = ({
   roadmap,
   feasibility,
   automation_insights,
+  onIterativeUpdate,
+  isGenerating,
+  onClearSession,
 }) => {
   const { getUserAccountStatus } = useAuth();
   const modalRef = useRef(null);
   const overlayRef = useRef(null);
   const cardRefs = useRef([]);
 
+  const [modificationInput, setModificationInput] = useState("");
+  const [showModificationSection, setShowModificationSection] = useState(false);
+
   const accountType = getUserAccountStatus();
   const isPro = accountType?.toLowerCase() === "pro";
+
+  // Log when modal receives new data
+  useEffect(() => {
+    if (isOpen && idea) {
+      console.log("🎭 MODAL UPDATED WITH NEW DATA:");
+      console.log("💡 Idea:", idea);
+      console.log("🏢 Business Models:", business_models);
+      console.log("🗺️ Roadmap:", roadmap);
+      console.log("📈 Feasibility:", feasibility);
+      console.log("🤖 Automation Insights:", automation_insights);
+      console.log("📊 Data comparison - Idea title:", idea?.title);
+      console.log("📊 Data comparison - Budget:", idea?.budget);
+    }
+  }, [
+    isOpen,
+    idea,
+    business_models,
+    roadmap,
+    feasibility,
+    automation_insights,
+  ]);
+
+  // Log when any prop changes to track re-renders
+  useEffect(() => {
+    console.log("🔍 MODAL PROPS CHANGED - Re-render triggered");
+  });
 
   useEffect(() => {
     if (isOpen) {
@@ -109,6 +144,32 @@ const IdeaResultModal = ({
       duration: 0.2,
       ease: "power2.out",
     });
+  };
+
+  const handleModificationSubmit = () => {
+    if (!modificationInput.trim()) return;
+
+    console.log("🔄 MODIFICATION SUBMITTED FROM MODAL:");
+    console.log("📝 Modification text:", modificationInput.trim());
+    console.log("📊 Current idea data being modified:", {
+      idea,
+      business_models,
+      roadmap,
+      feasibility,
+    });
+
+    if (onIterativeUpdate) {
+      onIterativeUpdate(modificationInput.trim());
+      setModificationInput("");
+      setShowModificationSection(false);
+
+      console.log("✅ Modification sent to parent component");
+    }
+  };
+
+  const toggleModificationSection = () => {
+    setShowModificationSection(!showModificationSection);
+    setModificationInput("");
   };
 
   if (!isOpen) return null;
@@ -602,14 +663,100 @@ const IdeaResultModal = ({
             </div>
           )}
 
+          {/* Iterative Modification Section */}
+          <div className="border-t border-gray-200 pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Edit3 className="h-5 w-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Modify This Idea
+                </h3>
+              </div>
+              <button
+                onClick={toggleModificationSection}
+                className="px-4 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+              >
+                {showModificationSection ? "Cancel" : "Make Changes"}
+              </button>
+            </div>
+
+            {showModificationSection && (
+              <div className="space-y-4">
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-700 mb-3">
+                    Tell us what you'd like to change about this business idea:
+                  </p>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="e.g., What if the budget increased by 20%? or What if material costs increased by 15%?"
+                      value={modificationInput}
+                      onChange={(e) => setModificationInput(e.target.value)}
+                      className="flex-1"
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && handleModificationSubmit()
+                      }
+                      disabled={isGenerating}
+                    />
+                    <button
+                      onClick={handleModificationSubmit}
+                      disabled={!modificationInput.trim() || isGenerating}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isGenerating ? (
+                        <div className="flex items-center gap-2">
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          Updating...
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <RefreshCw className="h-4 w-4" />
+                          Update
+                        </div>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick modification examples */}
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-sm text-gray-600">Quick examples:</span>
+                  {[
+                    "budget increased by 20%",
+                    "target urban markets instead",
+                    "material costs increased by 15%",
+                    "focus on sustainability more",
+                  ].map((example, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setModificationInput(example)}
+                      disabled={isGenerating}
+                      className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors disabled:opacity-50"
+                    >
+                      {example}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Action Buttons */}
-          <div className="flex gap-4 pt-4 border-t border-gray-200">
+          <div className="flex gap-3 pt-4 border-t border-gray-200">
             <button
               onClick={handleClose}
               className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
             >
               Close
             </button>
+            {onClearSession && (
+              <button
+                onClick={onClearSession}
+                className="px-4 py-3 bg-red-100 text-red-700 rounded-lg font-medium hover:bg-red-200 transition-colors"
+                title="Clear this session and start fresh"
+              >
+                Clear Session
+              </button>
+            )}
             <button
               className="flex-1 px-6 py-3 text-white rounded-lg font-medium transition-colors"
               style={{ backgroundColor: "#2fb86a" }}

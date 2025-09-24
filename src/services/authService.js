@@ -62,14 +62,37 @@ export const isAuthenticated = () => {
   return !!(token && user);
 };
 
-// Generate business idea using AI
+// Generate business idea using AI with iterative support
 export const generateBusinessIdea = async (
   prompt,
   userId,
   token,
-  accountType
+  accountType,
+  modification = null,
+  previousOutput = null
 ) => {
   try {
+    let finalPrompt = prompt;
+
+    // If this is an iterative call with modification and previous output
+    if (modification && previousOutput) {
+      // Construct the iterative prompt by combining previous JSON with modification
+      const previousJSON = JSON.stringify(previousOutput, null, 2);
+
+      console.log("🔄 ITERATIVE UPDATE DETECTED:");
+      console.log("📝 Modification:", modification);
+      console.log("📊 Previous Output:", previousOutput);
+      console.log("📋 Previous JSON:", previousJSON);
+
+      finalPrompt = `Based on the previous business idea output: ${previousJSON}, now recalculate considering that ${modification}, and model will remain same as our json data`;
+
+      console.log("🚀 Iterative prompt constructed:", finalPrompt);
+    } else {
+      console.log("🆕 Initial prompt:", finalPrompt);
+    }
+
+    console.log("✅ Final prompt:", finalPrompt);
+
     const response = await fetch(`${API_BASE_URL}/idea`, {
       method: "POST",
       headers: {
@@ -77,7 +100,7 @@ export const generateBusinessIdea = async (
         Authorization: token,
       },
       body: JSON.stringify({
-        prompt,
+        prompt: finalPrompt,
         user: userId,
         account: accountType || "Free",
       }),

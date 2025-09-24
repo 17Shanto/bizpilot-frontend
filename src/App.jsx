@@ -11,6 +11,7 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import RegistrationForm from "./pages/RegistrationForm";
 import PricePage from "./pages/PricePage";
+import ChatBot from "./pages/ChatBot";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,14 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<RegistrationForm />} />
             <Route path="/price" element={<PricePage />} />
+            <Route
+              path="/chatbot"
+              element={
+                <ProtectedRoute>
+                  <ChatBot />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/dashboard"
               element={

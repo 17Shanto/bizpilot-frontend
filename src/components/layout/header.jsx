@@ -203,10 +203,19 @@ const Header = React.forwardRef(({ className, ...props }, ref) => {
                   </a>
                   <a
                     className="transition-colors hover:text-foreground/80 text-foreground/60 font-medium"
-                    href="/pricing"
+                    href="/chatbot"
                     ref={(el) => (navItemRefs.current[2] = el)}
                     onMouseEnter={() => onNavItemEnter(2)}
                     onMouseLeave={() => onNavItemLeave(2)}
+                  >
+                    Chatbot
+                  </a>
+                  <a
+                    className="transition-colors hover:text-foreground/80 text-foreground/60 font-medium"
+                    href="/pricing"
+                    ref={(el) => (navItemRefs.current[3] = el)}
+                    onMouseEnter={() => onNavItemEnter(3)}
+                    onMouseLeave={() => onNavItemLeave(3)}
                   >
                     Pricing
                   </a>
@@ -231,7 +240,12 @@ const Header = React.forwardRef(({ className, ...props }, ref) => {
           <div className="flex items-center gap-2">
             {/* Show chatbot only when logged in */}
             {isLoggedIn && (
-              <AnimatedButton variant="ghost" size="icon" aria-label="AI Chat">
+              <AnimatedButton
+                variant="ghost"
+                size="icon"
+                aria-label="AI Chat"
+                onClick={() => navigate("/chatbot")}
+              >
                 <MessageCircle className="h-4 w-4" />
               </AnimatedButton>
             )}

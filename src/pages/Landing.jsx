@@ -33,6 +33,90 @@ const Landing = () => {
   const [showModal, setShowModal] = React.useState(false);
   const [generatedData, setGeneratedData] = React.useState(null);
   const [errorMessage, setErrorMessage] = React.useState("");
+  const [originalPrompt, setOriginalPrompt] = React.useState("");
+  const [showRestoreNotification, setShowRestoreNotification] =
+    React.useState(false);
+
+  // Load data from localStorage on component mount
+  React.useEffect(() => {
+    try {
+      const savedData = localStorage.getItem("bizpilot-generated-data");
+      const savedPrompt = localStorage.getItem("bizpilot-original-prompt");
+
+      if (savedData && isAuthenticated()) {
+        const parsedData = JSON.parse(savedData);
+        // Show notification to restore previous session
+        setShowRestoreNotification(true);
+        // Don't auto-load, let user choose
+        // setGeneratedData(parsedData);
+      }
+
+      if (savedPrompt) {
+        setOriginalPrompt(savedPrompt);
+      }
+    } catch (error) {
+      console.error("Error loading data from localStorage:", error);
+      // Clear corrupted data
+      localStorage.removeItem("bizpilot-generated-data");
+      localStorage.removeItem("bizpilot-original-prompt");
+    }
+  }, [isAuthenticated]);
+
+  // Save to localStorage whenever data changes
+  const saveToLocalStorage = (data, prompt) => {
+    try {
+      if (data) {
+        localStorage.setItem("bizpilot-generated-data", JSON.stringify(data));
+      }
+      if (prompt) {
+        localStorage.setItem("bizpilot-original-prompt", prompt);
+      }
+    } catch (error) {
+      console.error("Error saving to localStorage:", error);
+    }
+  };
+
+  // Clear localStorage data
+  const clearStoredData = () => {
+    try {
+      localStorage.removeItem("bizpilot-generated-data");
+      localStorage.removeItem("bizpilot-original-prompt");
+    } catch (error) {
+      console.error("Error clearing localStorage:", error);
+    }
+  };
+
+  // Restore previous session data
+  const restorePreviousSession = () => {
+    try {
+      const savedData = localStorage.getItem("bizpilot-generated-data");
+      const savedPrompt = localStorage.getItem("bizpilot-original-prompt");
+
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        setGeneratedData(parsedData);
+        setShowModal(true);
+        toast.success("Previous session restored!");
+      }
+
+      if (savedPrompt) {
+        setOriginalPrompt(savedPrompt);
+      }
+
+      setShowRestoreNotification(false);
+    } catch (error) {
+      console.error("Error restoring session:", error);
+      toast.error("Failed to restore previous session");
+      clearStoredData();
+      setShowRestoreNotification(false);
+    }
+  };
+
+  // Dismiss restore notification and clear old data
+  const dismissRestoreNotification = () => {
+    setShowRestoreNotification(false);
+    clearStoredData();
+  };
 
   const handleDemoSubmit = async () => {
     if (!demoInput.trim()) return;
@@ -54,6 +138,9 @@ const Landing = () => {
       const prompt = demoInput.trim();
       const accountType = getUserAccountStatus();
 
+      // Save the original prompt for potential iterative updates
+      setOriginalPrompt(prompt);
+
       const response = await generateBusinessIdea(
         prompt,
         user._id,
@@ -63,6 +150,8 @@ const Landing = () => {
 
       if (response.statusCode === 201 && response.data) {
         setGeneratedData(response.data);
+        // Save to localStorage for persistence
+        saveToLocalStorage(response.data, prompt);
         setShowModal(true);
         toast.success("Business idea generated successfully!");
       } else {
@@ -77,9 +166,101 @@ const Landing = () => {
     }
   };
 
+  // Handle iterative updates to existing business ideas
+  const handleIterativeUpdate = async (modification) => {
+    if (!generatedData || !originalPrompt || !modification.trim()) {
+      toast.error("No previous idea to modify or invalid modification");
+      return;
+    }
+
+    // Check if user is logged in
+    if (!isAuthenticated()) {
+      toast.error("Please log in to modify business ideas");
+      return;
+    }
+
+    setIsGenerating(true);
+    setErrorMessage("");
+
+    try {
+      const accountType = getUserAccountStatus();
+
+      const response = await generateBusinessIdea(
+        originalPrompt, // Original prompt (not used when modification provided)
+        user._id,
+        token,
+        accountType,
+        modification, // Modification text
+        generatedData // Previous output for context
+      );
+
+      if (response.statusCode === 201 && response.data) {
+        console.log("🎉 ITERATIVE UPDATE SUCCESS:");
+        console.log("📥 New data from server:", response.data);
+        console.log("📊 Previous data (before update):", generatedData);
+
+        setGeneratedData(response.data);
+
+        console.log("✅ State updated with new data");
+
+        // Save updated data to localStorage
+        saveToLocalStorage(response.data, originalPrompt);
+        toast.success("Business idea updated successfully!");
+
+        console.log("💾 New data saved to localStorage");
+      } else {
+        throw new Error("Invalid response from server");
+      }
+    } catch (error) {
+      console.error("Error updating business idea:", error);
+      setErrorMessage("Failed to update idea. Please try again.");
+      toast.error("Failed to update business idea");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
+
+      {/* Restore Previous Session Notification */}
+      {showRestoreNotification && (
+        <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
+          <div className="container max-w-screen-2xl mx-auto">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                  <TrendingUp className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-blue-900">
+                    Previous session found
+                  </p>
+                  <p className="text-xs text-blue-700">
+                    You have an unsaved business idea from a previous session.
+                    Would you like to restore it?
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={restorePreviousSession}
+                  className="px-3 py-1.5 bg-blue-500 text-white rounded-md text-sm font-medium hover:bg-blue-600 transition-colors"
+                >
+                  Restore
+                </button>
+                <button
+                  onClick={dismissRestoreNotification}
+                  className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="relative overflow-hidden hero-gradient py-16 lg:py-24">
@@ -605,6 +786,15 @@ const Landing = () => {
         roadmap={generatedData?.roadmap}
         feasibility={generatedData?.feasibility}
         automation_insights={generatedData?.automation_insights}
+        onIterativeUpdate={handleIterativeUpdate}
+        isGenerating={isGenerating}
+        onClearSession={() => {
+          clearStoredData();
+          setGeneratedData(null);
+          setOriginalPrompt("");
+          setShowModal(false);
+          toast.success("Session cleared successfully!");
+        }}
       />
     </div>
   );
