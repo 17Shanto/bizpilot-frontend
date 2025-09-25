@@ -185,24 +185,6 @@ const Header = React.forwardRef(({ className, ...props }, ref) => {
                 <>
                   <a
                     className="transition-colors hover:text-foreground/80 text-foreground/60 font-medium"
-                    href="/dashboard"
-                    ref={(el) => (navItemRefs.current[0] = el)}
-                    onMouseEnter={() => onNavItemEnter(0)}
-                    onMouseLeave={() => onNavItemLeave(0)}
-                  >
-                    Dashboard
-                  </a>
-                  <a
-                    className="transition-colors hover:text-foreground/80 text-foreground/60 font-medium"
-                    href="/ideas"
-                    ref={(el) => (navItemRefs.current[1] = el)}
-                    onMouseEnter={() => onNavItemEnter(1)}
-                    onMouseLeave={() => onNavItemLeave(1)}
-                  >
-                    Ideas
-                  </a>
-                  <a
-                    className="transition-colors hover:text-foreground/80 text-foreground/60 font-medium"
                     href="/chatbot"
                     ref={(el) => (navItemRefs.current[2] = el)}
                     onMouseEnter={() => onNavItemEnter(2)}
