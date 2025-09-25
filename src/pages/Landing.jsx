@@ -457,9 +457,6 @@ const Landing = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
               <div className="space-y-4">
-                <Badge className="bg-accent/10 text-accent border-accent/20 font-medium">
-                  🇧🇩 Made for Bangladesh Entrepreneurs
-                </Badge>
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-balance leading-tight">
                   Your AI Business
                   <span className="text-primary block">Planning Assistant</span>

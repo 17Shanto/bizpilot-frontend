@@ -208,21 +208,6 @@ const ChatBot = () => {
     }
   };
 
-  const clearHistory = () => {
-    setMessages([
-      {
-        id: 1,
-        text: "Hello! I'm BizPilot AI, your business assistant. How can I help you today?",
-        isUser: false,
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      },
-    ]);
-    setError("");
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-white">
       <Header />
@@ -246,16 +231,6 @@ const ChatBot = () => {
                 </p>
               </div>
             </div>
-
-            {/* Clear History Button */}
-            <button
-              onClick={clearHistory}
-              className="flex items-center px-3 py-2 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              title="Clear chat history"
-            >
-              <Trash2 className="w-4 h-4 mr-1" />
-              Clear
-            </button>
           </div>
         </div>
 

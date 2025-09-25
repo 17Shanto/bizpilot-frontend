@@ -199,7 +199,11 @@ const Header = React.forwardRef(({ className, ...props }, ref) => {
                     onMouseEnter={() => onNavItemEnter(2)}
                     onMouseLeave={() => onNavItemLeave(2)}
                   >
-                    Chatbot
+                    <div className="flex gap-2">
+                      {" "}
+                      Chatbot
+                      <MessageCircle className="h-4 w-4" />
+                    </div>
                   </a>
                   <a
                     className="transition-colors hover:text-foreground/80 text-foreground/60 font-medium"
@@ -212,34 +216,11 @@ const Header = React.forwardRef(({ className, ...props }, ref) => {
                   </a>
                 </>
               )}
-
-              {/* Show only Home when not logged in */}
-              {!isLoggedIn && (
-                <a
-                  className="transition-colors hover:text-foreground/80 text-foreground/60 font-medium"
-                  href="/"
-                  ref={(el) => (navItemRefs.current[0] = el)}
-                  onMouseEnter={() => onNavItemEnter(0)}
-                  onMouseLeave={() => onNavItemLeave(0)}
-                >
-                  Home
-                </a>
-              )}
             </nav>
           </div>
 
           <div className="flex items-center gap-2">
             {/* Show chatbot only when logged in */}
-            {isLoggedIn && (
-              <AnimatedButton
-                variant="ghost"
-                size="icon"
-                aria-label="AI Chat"
-                onClick={() => navigate("/chatbot")}
-              >
-                <MessageCircle className="h-4 w-4" />
-              </AnimatedButton>
-            )}
 
             {/* Authentication-dependent buttons */}
             {!isLoggedIn ? (
