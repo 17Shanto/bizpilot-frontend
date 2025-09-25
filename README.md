@@ -108,4 +108,4 @@ For questions or support, please contact the BizPilot team.
 
 ---
 
-🇧🇩 **Made with ❤️ for Bangladesh entrepreneurs**
+🇧🇩 **Made for Bangladesh entrepreneurs**
