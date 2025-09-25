@@ -1,8 +1,60 @@
+## Project Overview
 # BizPilot - AI Business Planning Assistant
 
-## Project Overview
+Our team, **The Art Nexus**, developed **BizPilot AI** and proudly secured a **Top 10 position out of 80 teams** in the Hackathon organized by  
+**"DSI presents BUP CSE Tech Carnival 2025"** at Bangladesh University of Professionals.  
+We are now awaiting the final results. 
 
-**BizPilot** is an intelligent business planning and growth insights platform designed specifically for entrepreneurs in Bangladesh and beyond. Transform your business ideas into actionable models with AI-powered analysis.
+---
+
+## About BizPilot AI
+**BizPilot AI** is an intelligent assistant designed to help entrepreneurs transform their business ideas into structured, data-driven, and visually engaging plans.  
+
+With just a simple **sign-up and login**, users can:  
+- Share their ideas  
+- Instantly receive a comprehensive business plan  
+- Explore graphical insights and actionable recommendations  
+- Download reports in **CSV** and **PDF** formats  
+
+---
+
+## 📊 Platform Features
+
+### 🔑 Core Idea
+- Title, location, budget, and category of the business  
+
+### 💼 Business Models
+- Detailed summaries  
+- Cost breakdowns *(production, marketing, logistics, and others)*  
+- Risk analysis and opportunities  
+- Break-even point estimates  
+- Multi-stage revenue forecasts *(3 to 24 months)*  
+
+### 🗺 Roadmap
+- Month-by-month milestones for smooth execution  
+
+### 📈 Feasibility Analysis
+- Profitability insights  
+- Recommended business models  
+- AI-generated confidence scores  
+
+### 🤖 Automation Features
+- Predictive inventory  
+- Employee optimization  
+- Cashflow scenario modeling  
+- Anomaly detection  
+- Conversational AI coach  
+
+---
+
+## 🧩 Why BizPilot AI?
+By converting raw ideas into **structured JSON-based data**, BizPilot AI empowers users to:  
+✔️ Explore opportunities  
+✔️ Analyze risks  
+✔️ Refine ventures with clarity and confidence  
+
+It also supports **discussions around specific business terms**, making it both a **planning** and **learning companion** for entrepreneurs.  
+
 
 ## Features
 
