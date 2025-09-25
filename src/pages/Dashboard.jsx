@@ -719,7 +719,7 @@ const Landing = () => {
 
           <div className="border-t border-border/40 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              © 2024 BizPilot. Made with ❤️ for Bangladesh entrepreneurs.
+              © 2024 BizPilot. Made for Bangladesh entrepreneurs.
             </p>
             <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2 md:mt-0">
               <span>🇧🇩</span>
