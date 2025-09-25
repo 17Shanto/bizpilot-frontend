@@ -68,6 +68,7 @@ const ChatBot = () => {
   ]);
   const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [error, setError] = useState("");
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -80,65 +81,103 @@ const ChatBot = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Mock bot responses
-  const getBotResponse = (userMessage) => {
-    const responses = [
-      "That's an interesting question! Let me help you with that business insight.",
-      "Based on market analysis, here are some key points to consider for your business strategy.",
-      "I can help you analyze that further. What specific aspect would you like to explore?",
-      "Great question! For business optimization, I'd recommend focusing on these areas.",
-      "Let me provide you with some AI-powered insights on that topic.",
-      "That's a strategic thinking! Here's what the data suggests for your business growth.",
-      "I can help you break that down into actionable business steps.",
-      "Excellent point! Market trends indicate several opportunities in this area.",
-    ];
+  // API call to get bot response
+  const getBotResponse = async (userMessage) => {
+    try {
+      setError("");
+      const response = await fetch(
+        "https://bizpilot-backend.vercel.app/bizpilot-api/idea/chatbot",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: userMessage,
+            // You can add additional parameters if your API requires them
+            // timestamp: new Date().toISOString(),
+            // sessionId: "current-session-id" // if you want to maintain session
+          }),
+        }
+      );
 
-    // Simple keyword-based responses
-    const lowerMessage = userMessage.toLowerCase();
-    if (lowerMessage.includes("price") || lowerMessage.includes("cost")) {
-      return "For pricing strategies, consider value-based pricing aligned with your target market's willingness to pay. Would you like me to analyze your specific pricing model?";
-    } else if (
-      lowerMessage.includes("market") ||
-      lowerMessage.includes("competition")
-    ) {
-      return "Market analysis is crucial for business success. I can help you identify market opportunities, competitor analysis, and positioning strategies. What's your target market?";
-    } else if (
-      lowerMessage.includes("idea") ||
-      lowerMessage.includes("business")
-    ) {
-      return "I can help generate and validate business ideas! What industry or problem area interests you? I'll provide AI-powered insights and market validation.";
-    } else if (
-      lowerMessage.includes("help") ||
-      lowerMessage.includes("support")
-    ) {
-      return "I'm here to assist with business strategy, market analysis, idea generation, financial planning, and growth optimization. What specific area would you like to explore?";
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Adjust this based on your API response structure
+      // Common response structures might be:
+      // { response: "message" } or { answer: "message" } or { data: "message" }
+      if (data.response) {
+        return data.response;
+      } else if (data.answer) {
+        return data.answer;
+      } else if (data.data) {
+        return data.data;
+      } else if (data.message) {
+        return data.message;
+      } else {
+        // If the structure is different, return the entire response as string
+        return JSON.stringify(data);
+      }
+    } catch (error) {
+      console.error("Error calling chatbot API:", error);
+      setError(
+        "Sorry, I'm having trouble connecting right now. Please try again."
+      );
+
+      // Fallback responses when API is unavailable
+      const fallbackResponses = [
+        "I'm currently experiencing technical difficulties. Please try again in a moment.",
+        "It seems I'm having connection issues. Let's try that again?",
+        "I apologize for the interruption. Could you please repeat your question?",
+      ];
+
+      return fallbackResponses[
+        Math.floor(Math.random() * fallbackResponses.length)
+      ];
     }
-
-    return responses[Math.floor(Math.random() * responses.length)];
   };
 
-  // Simulate typing delay for bot response
+  // Simulate typing delay and get bot response from API
   const simulateBotResponse = async (userMessage) => {
     setIsTyping(true);
 
-    // Simulate processing time
-    await new Promise((resolve) =>
-      setTimeout(resolve, 1000 + Math.random() * 2000)
-    );
+    try {
+      // Get response from API
+      const botResponse = await getBotResponse(userMessage);
 
-    const botResponse = getBotResponse(userMessage);
-    const newBotMessage = {
-      id: Date.now() + 1,
-      text: botResponse,
-      isUser: false,
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
+      const newBotMessage = {
+        id: Date.now() + 1,
+        text: botResponse,
+        isUser: false,
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
 
-    setMessages((prev) => [...prev, newBotMessage]);
-    setIsTyping(false);
+      setMessages((prev) => [...prev, newBotMessage]);
+    } catch (error) {
+      console.error("Error in bot response:", error);
+
+      // Error message already handled in getBotResponse
+      const errorMessage = {
+        id: Date.now() + 1,
+        text: "I apologize, but I'm having trouble processing your request. Please try again.",
+        isUser: false,
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const handleSendMessage = () => {
@@ -158,7 +197,7 @@ const ChatBot = () => {
     setMessages((prev) => [...prev, newUserMessage]);
     setInputMessage("");
 
-    // Generate bot response
+    // Generate bot response via API
     simulateBotResponse(inputMessage);
   };
 
@@ -181,6 +220,7 @@ const ChatBot = () => {
         }),
       },
     ]);
+    setError("");
   };
 
   return (
@@ -218,6 +258,30 @@ const ChatBot = () => {
             </button>
           </div>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border-l-4 border-red-400 p-4 mx-4 mt-4 rounded">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg
+                  className="h-5 w-5 text-red-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
