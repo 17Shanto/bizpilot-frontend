@@ -3,7 +3,6 @@
 
 Our team, **The Art Nexus**, developed **BizPilot AI** and proudly secured a **Top 10 position out of 80 teams** in the Hackathon organized by  
 **"DSI presents BUP CSE Tech Carnival 2025"** at Bangladesh University of Professionals.  
-We are now awaiting the final results. 
 
 ---
 
