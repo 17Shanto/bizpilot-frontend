@@ -1,73 +1,111 @@
-# Welcome to your Lovable project
+# BizPilot - AI Business Planning Assistant
 
-## Project info
+## Project Overview
 
-**URL**: https://lovable.dev/projects/2522bf93-2331-4cb9-82f3-4f5e209288d7
+**BizPilot** is an intelligent business planning and growth insights platform designed specifically for entrepreneurs in Bangladesh and beyond. Transform your business ideas into actionable models with AI-powered analysis.
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- 🤖 **AI-Powered Business Idea Generation**
+- 📊 **Market Analysis & Competitor Research**
+- 🎯 **Bangladesh-Specific Business Insights**
+- 💡 **Interactive Business Model Canvas**
+- 📈 **Revenue Forecasting & Growth Strategies**
+- 🗣️ **Multilingual Support** (Bengali & English)
+- 🎙️ **Voice-to-Text Input** with Auto-Translation
 
-**Use Lovable**
+## Tech Stack
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/2522bf93-2331-4cb9-82f3-4f5e209288d7) and start prompting.
+This project is built with modern web technologies:
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Frontend Framework:** React 18
+- **Build Tool:** Vite
+- **Styling:** Tailwind CSS
+- **UI Components:** shadcn/ui
+- **Language:** JavaScript
+- **Icons:** Lucide React
+- **Charts:** Chart.js with react-chartjs-2
+- **Animations:** GSAP
+- **Authentication:** Custom JWT implementation
 
-**Use your preferred IDE**
+## Getting Started
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Prerequisites
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Node.js (v16 or higher)
+- npm or yarn package manager
 
-Follow these steps:
+### Installation
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+```bash
+# Clone the repository
+git clone <your-repository-url>
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Navigate to project directory
+cd BizPilot-Application
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Install dependencies
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server
 npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
 ```
 
-**Edit a file directly in GitHub**
+## Development
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Available Scripts
 
-**Use GitHub Codespaces**
+- `npm run dev` - Start development server with hot reload
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build locally
+- `npm run lint` - Run ESLint for code quality
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Project Structure
 
-## What technologies are used for this project?
+```
+src/
+├── components/          # Reusable UI components
+│   ├── ui/             # Base UI components
+│   ├── layout/         # Layout components
+│   └── ideas/          # Business idea related components
+├── pages/              # Page components
+├── context/            # React context providers
+├── services/           # API service functions
+├── hooks/              # Custom React hooks
+├── lib/                # Utility functions
+└── assets/             # Static assets
+```
 
-This project is built with:
+## Contributing
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## How can I deploy this project?
+## Deployment
 
-Simply open [Lovable](https://lovable.dev/projects/2522bf93-2331-4cb9-82f3-4f5e209288d7) and click on Share -> Publish.
+The application can be deployed to any static hosting service:
 
-## Can I connect a custom domain to my Lovable project?
+- **Vercel:** Connect your GitHub repository
+- **Netlify:** Drag and drop the `dist` folder
+- **GitHub Pages:** Use GitHub Actions for automated deployment
 
-Yes, you can!
+## License
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Contact
+
+For questions or support, please contact the BizPilot team.
+
+---
+
+🇧🇩 **Made with ❤️ for Bangladesh entrepreneurs**
